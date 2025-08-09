@@ -45,6 +45,10 @@ export class ServerAnimator {
 		return newTrack;
 	}
 
+	public GetAnimation(id: string) {
+		return this.tracks.get(id);
+	}
+
 	/**
 	 * Loads an animation and creates a new track for it. The animation state is stored in a shared Atom,
 	 * and the track is returned.

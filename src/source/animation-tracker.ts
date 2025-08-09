@@ -42,6 +42,14 @@ export class AnimationTracker {
 	}
 
 	/**
+	 * Retrieves the length of the animation.
+	 * @returns The total duration of the animation in seconds.
+	 */
+	public GetLength() {
+		return this.config.Length;
+	}
+
+	/**
 	 * Retrieves whether the animation is currently looping.
 	 * @returns Whether the animation is looping.
 	 */

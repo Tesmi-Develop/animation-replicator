@@ -15,7 +15,6 @@ export class AnimationTracker {
 	public readonly Atom: Atom<AnimationData["State"] | undefined>;
 	private config: AnimationData["Config"];
 	private signalMarkers = new Map<string, Signal<(value: string) => void>>();
-	private animationEvents = new Map<string, AnimationEvent & { NeedProgress: number }>();
 	private connectionUpdate?: RBXScriptConnection;
 
 	constructor(animationData: AnimationData) {
@@ -233,19 +232,13 @@ export class AnimationTracker {
 	}
 
 	private initAnimationUpdate() {
-		this.animationEvents = new Map<string, AnimationEvent & { NeedProgress: number }>();
-
-		this.config.Events.forEach((event, name) => {
-			this.animationEvents.set(name, {
-				...event,
-				NeedProgress: event.Time / this.config.Length,
-			});
-		});
-
 		if (this.connectionUpdate) {
 			this.connectionUpdate.Disconnect();
 			this.connectionUpdate = undefined;
 		}
+
+		const events = this.config.Events;
+		let currentEventIndex = 0;
 
 		this.connectionUpdate = RunService.Heartbeat.Connect(() => {
 			const state = this.Atom()!;
@@ -253,18 +246,14 @@ export class AnimationTracker {
 			if (state.Speed === 0) return;
 			const currentProgress = CalculateProgress(state.StartTime, state.EndTime, state.PassedProgress);
 
-			for (const [name, signal] of this.signalMarkers) {
-				if (!this.animationEvents.has(name)) continue;
-
-				const needProgress = this.animationEvents.get(name)!.NeedProgress;
-				if (currentProgress < needProgress) return;
-
-				const value = this.animationEvents.get(name)!.Value;
-				signal.Fire(value);
-				this.MarkerReached.Fire(name, value);
-				this.animationEvents.delete(name);
+			while (currentEventIndex < events.size() && events[currentEventIndex].NeedProgress <= currentProgress) {
+				const event = events[currentEventIndex];
+				const value = event.Value;
+				this.signalMarkers.get(event.Name)?.Fire(value);
+				this.MarkerReached.Fire(event.Name, value);
+				currentEventIndex += 1;
 			}
-
+			
 			if (currentProgress >= 1) {
 				if (state.Looped) {
 					this.DidLoop.Fire();

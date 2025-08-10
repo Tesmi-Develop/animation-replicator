@@ -10,6 +10,14 @@ import { AnimationTracker } from "./animation-tracker";
  * that will be replicated to clients.
  */
 export class ServerAnimator {
+	private static cachedAnimations: Map<
+		string,
+		{
+			Config: AnimationData["Config"];
+			Priority: Enum.AnimationPriority;
+			Looped: boolean;
+		}
+	> = new Map();
 	private tracks: Map<string, AnimationTracker> = new Map();
 
 	constructor(private atom: Atom<Map<string, AnimationData>>) {}
@@ -45,6 +53,20 @@ export class ServerAnimator {
 		return newTrack;
 	}
 
+	private createAnimationState(priority: Enum.AnimationPriority, looped: boolean): AnimationData["State"] {
+		return {
+			IsPlaying: false,
+			PassedProgress: 0,
+			StartTime: 0,
+			EndTime: 0,
+			Weight: 1,
+			FadeTime: 0.100000001,
+			Speed: 1,
+			Priority: priority,
+			Looped: looped,
+		};
+	}
+
 	public GetAnimation(id: string) {
 		return this.tracks.get(id);
 	}
@@ -57,9 +79,28 @@ export class ServerAnimator {
 	 */
 	public async LoadAnimation(animation: Animation) {
 		const id = typeIs(animation, "string") ? animation : animation.AnimationId;
+		if (ServerAnimator.cachedAnimations.has(id)) {
+			const cached = ServerAnimator.cachedAnimations.get(id)!;
+
+			const data: AnimationData = {
+				Name: animation.Name,
+				Id: id,
+				Config: cached.Config,
+				State: this.createAnimationState(cached.Priority, cached.Looped),
+			};
+
+			this.atom(
+				produce(this.atom(), (draft) => {
+					draft.set(id, data);
+				}),
+			);
+
+			return this.createTrack(data, id);
+		}
+
 		const animationSource = KeyframeSequenceProvider.GetKeyframeSequenceAsync(id);
 
-		const events = new Map<string, AnimationEvent>();
+		const events: AnimationEvent[] = [];
 		let lenght = 0;
 
 		animationSource.GetDescendants().forEach((marker) => {
@@ -75,11 +116,17 @@ export class ServerAnimator {
 				return;
 			}
 
-			events.set(marker.Name, {
+			events.push({
 				Name: marker.Name,
 				Value: marker.Value,
 				Time: keyframe.Time,
+				NeedProgress: 0,
 			});
+		});
+
+		events.sort((a, b) => a.Time < b.Time);
+		events.forEach((event, index) => {
+			events[index].NeedProgress = event.Time / lenght;
 		});
 
 		const data: AnimationData = {
@@ -90,18 +137,14 @@ export class ServerAnimator {
 				Animation: animation,
 				Events: events,
 			},
-			State: {
-				IsPlaying: false,
-				PassedProgress: 0,
-				StartTime: 0,
-				EndTime: 0,
-				Speed: 1,
-				FadeTime: 0.100000001,
-				Weight: 1,
-				Priority: animationSource.Priority,
-				Looped: animationSource.Loop,
-			},
+			State: this.createAnimationState(animationSource.Priority, animationSource.Loop),
 		};
+
+		ServerAnimator.cachedAnimations.set(id, {
+			Config: data.Config,
+			Priority: animationSource.Priority,
+			Looped: animationSource.Loop,
+		});
 
 		this.atom(
 			produce(this.atom(), (draft) => {

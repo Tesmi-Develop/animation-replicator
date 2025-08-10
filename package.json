@@ -1,6 +1,6 @@
 {
   "name": "@rbxts/animation-replicator",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "",
   "main": "out/init.lua",
   "scripts": {

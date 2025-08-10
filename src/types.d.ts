@@ -1,6 +1,7 @@
 export interface AnimationEvent {
 	Name: string;
 	Time: number;
+	NeedProgress: number;
 	Value: string;
 }
 
@@ -10,7 +11,7 @@ export interface AnimationData {
 	Config: {
 		Length: number;
 		Animation: Animation;
-		Events: Map<string, AnimationEvent>;
+		Events: AnimationEvent[];
 	};
 	State: {
 		IsPlaying: boolean;

@@ -15,10 +15,7 @@ export class ClientAnimator {
 	 * @param atom The state container holding a map of animation data.
 	 */
 
-	constructor(
-		private animator: Animator,
-		private atom: Atom<Map<string, AnimationData>>,
-	) {}
+	constructor(private animator: Animator, private atom: Atom<Map<string, AnimationData>>) {}
 
 	private createTrack(animationData: AnimationData, id: string) {
 		const newAtom = atom(animationData.State);

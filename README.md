@@ -148,7 +148,7 @@ An internal class of ``ClientAnimator`` responsible for the actual playback of a
 
 ---
 <p align="center">
-shared-components-flamework is released under the <a href="LICENSE.md">MIT License</a>.
+animation-replicator is released under the <a href="LICENSE.md">MIT License</a>.
 </p>
 
 <div align="center">
